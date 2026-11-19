@@ -2,7 +2,7 @@
 
 A personal AI phone assistant for calls forwarded from an existing mobile number.
 
-> Status: foundation. Telephony and AI integrations are not configured until provider access, credentials, and the supported audio-streaming contract are confirmed.
+> Current status: backend persistence and authenticated settings/call-history APIs. Carrier forwarding, live telephony, AI voice, Android UI, and recording pipeline are not integrated yet.
 
 ## Product goals
 
@@ -16,49 +16,70 @@ A personal AI phone assistant for calls forwarded from an existing mobile number
 ## Repository layout
 
 - `backend/`: Go API and provider/voice adapters.
-- `android/`: Kotlin + Jetpack Compose application (next implementation stage).
+- `android/`: Kotlin + Jetpack Compose application (planned).
 - `deployments/`: local infrastructure.
 - `docs/`: architecture and development plan.
 
 The telephony provider and cloud backend must answer calls independently of the Android app.
 
-## Run backend
+## Run locally
 
-Requirements: Go 1.23+.
+Requirements: Go 1.27.4+ and Docker Compose.
 
-```bash
-cd backend
-go mod tidy
-go run ./cmd/api
-```
-
-- `GET /healthz`: liveness.
-- `GET /readyz`: current configuration readiness; external dependencies are not integrated yet.
-- `GET /api/v1/version`: service version.
-
-## Local infrastructure
+1. Copy `.env.example` to `.env`.
+2. Generate a private API token and replace the placeholder:
 
 ```bash
-docker compose -f deployments/docker-compose.yml up -d
+openssl rand -hex 32
 ```
+
+3. Start the complete local stack:
+
+```bash
+docker compose -f deployments/docker-compose.yml up -d --build
+```
+
+4. Check readiness:
+
+```bash
+curl http://localhost:8080/healthz
+curl http://localhost:8080/readyz
+```
+
+The API reads the root `.env` file. The Compose stack exposes the API on 8080, PostgreSQL on 5438, and Redis on 6381.
+
+## API
+
+All `/api/v1` endpoints require:
+
+```http
+Authorization: Bearer <API_ACCESS_TOKEN>
+```
+
+- `GET /api/v1/version`
+- `GET /api/v1/settings`
+- `PATCH /api/v1/settings`
+- `GET /api/v1/calls?limit=20&offset=0`
+- `GET /api/v1/calls/{id}`
+
+Example settings update:
+
+```bash
+curl -X PATCH http://localhost:8080/api/v1/settings \
+  -H "Authorization: Bearer $API_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"automatic","preferred_language":"ml"}'
+```
+
+Call history will remain empty until a telephony provider is connected.
 
 ## Privacy and security defaults
 
-- No credentials are committed.
-- Call recording is disabled by default.
-- Do not persist raw audio until caller disclosure, consent, applicable legal requirements, provider retention, and access controls have been reviewed.
+- No provider credentials are committed.
+- Call recording is disabled by default and cannot yet be enabled through the API; the recording pipeline and consent/disclosure flow are not implemented.
 - Transcripts, recordings, and summaries are sensitive; define access controls and retention/deletion before production.
-- Authenticate provider webhooks and make call events idempotent.
+- Provider webhooks must be authenticated and call events idempotent.
 - Requested assistant mode and verified carrier forwarding state are separate.
-
-## Milestones
-
-1. Backend foundation and local infrastructure.
-2. Provider account, inbound number, webhook validation, and verified forwarding.
-3. Bidirectional streaming and call lifecycle.
-4. Realtime voice integration and Malayalam/English evaluation.
-5. Recording, object storage, transcripts, and summaries.
-6. Android app, FCM notifications, call history, and playback.
-7. Production hardening and deployment.
+- The current bearer token is a single-owner development gate, not a substitute for production user authentication and token rotation.
 
 See [architecture](docs/architecture.md) and [development plan](docs/development-plan.md).
