@@ -4,9 +4,8 @@ FROM golang:1.27.4-alpine AS builder
 
 WORKDIR /src
 RUN apk add --no-cache ca-certificates
-COPY go.mod ./
-RUN go mod download
 COPY . .
+RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -trimpath \
     -ldflags="-s -w" \
