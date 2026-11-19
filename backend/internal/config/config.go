@@ -43,7 +43,7 @@ func Load() (Config, error) {
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("DATABASE_URL is required")
 	}
-	if cfg.APIAccessToken == "" || len(cfg.APIAccessToken) < 32 {
+	if cfg.APIAccessToken == "" || len(cfg.APIAccessToken) < 32 || strings.HasPrefix(cfg.APIAccessToken, "replace_with_") {
 		return Config{}, fmt.Errorf("API_ACCESS_TOKEN must contain at least 32 characters")
 	}
 	return cfg, nil
