@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/san-sp/GoCallAI/backend/internal/app"
 	"github.com/san-sp/GoCallAI/backend/internal/config"
 	"github.com/san-sp/GoCallAI/backend/internal/httpapi"
 )
@@ -26,9 +27,17 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	startupCtx, startupCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	application, err := app.New(startupCtx, cfg)
+	startupCancel()
+	if err != nil {
+		log.Fatalf("initialize application: %v", err)
+	}
+	defer application.Close()
+
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           httpapi.NewRouter(cfg),
+		Handler:           httpapi.NewRouter(cfg, application),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
