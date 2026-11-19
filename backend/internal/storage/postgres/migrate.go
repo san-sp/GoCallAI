@@ -57,7 +57,16 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 				_ = tx.Rollback(ctx)
 				return fmt.Errorf("read migration %s: %w", version, readErr)
 			}
-			if _, err = tx.Exec(ctx, string(sqlBytes)); err == nil {
+			for _, statement := range strings.Split(string(sqlBytes), ";") {
+				statement = strings.TrimSpace(statement)
+				if statement == "" {
+					continue
+				}
+				if _, err = tx.Exec(ctx, statement); err != nil {
+					break
+				}
+			}
+			if err == nil {
 				_, err = tx.Exec(ctx, "INSERT INTO schema_migrations (version) VALUES ($1)", version)
 			}
 		}
