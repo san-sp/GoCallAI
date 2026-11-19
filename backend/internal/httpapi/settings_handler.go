@@ -58,6 +58,11 @@ func (h *SettingsHandler) Update(c *gin.Context) {
 		}
 	}
 
+	if input.RecordingEnabled != nil && *input.RecordingEnabled {
+		c.JSON(http.StatusConflict, gin.H{"error": "call recording is not available until the recording and consent workflow is implemented"})
+		return
+	}
+
 	settings, err := h.repository.Update(c.Request.Context(), input)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not update assistant settings"})
