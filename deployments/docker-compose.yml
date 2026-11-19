@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: gocallai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gocallai
+      POSTGRES_USER: gocallai
+      POSTGRES_PASSWORD: gocallai_dev
+    ports:
+      - "5438:5432"
+    volumes:
+      - gocallai_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gocallai -d gocallai"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: gocallai-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6381:6379"
+    volumes:
+      - gocallai_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  gocallai_postgres_data:
+  gocallai_redis_data:
